@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>TALIVRA TR — كلمة مرور جديدة</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;800&display=swap" rel="stylesheet">
+<style>
+  :root { --black:#000; --panel:#121212; --line:#2A2A2A; --orange:#FF7A00; --text:#F5F5F5; --muted:#9E9E9E; --red:#EF5350; --green:#26A69A; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--black); color:var(--text); font-family:"Tajawal",Tahoma,Arial,sans-serif; display:flex; align-items:center; justify-content:center; padding:24px; }
+  main { width:100%; max-width:420px; }
+  .brand { font-weight:800; font-size:20px; text-align:center; margin-bottom:28px; }
+  .brand span { color:var(--orange); }
+  h1 { font-size:26px; font-weight:800; margin:0 0 8px; }
+  p { color:var(--muted); line-height:1.8; margin:0 0 22px; }
+  label { display:block; font-size:14px; margin:0 0 6px; color:var(--text); }
+  input { width:100%; font:inherit; font-size:16px; color:var(--text); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:16px; direction:ltr; text-align:left; }
+  input:focus-visible { outline:2px solid var(--orange); border-color:var(--orange); }
+  button { width:100%; font:inherit; font-size:17px; font-weight:800; background:var(--orange); color:#000; border:0; border-radius:14px; padding:16px; cursor:pointer; }
+  button:disabled { opacity:.5; }
+  button:focus-visible { outline:3px solid var(--text); outline-offset:3px; }
+  .msg { min-height:24px; font-size:14px; margin-top:14px; line-height:1.7; }
+  .err { color:var(--red); } .ok { color:var(--green); }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">TALIVRA <span>TR</span></div>
+
+  <section id="formView">
+    <h1>كلمة مرور جديدة</h1>
+    <p>اختر كلمة مرور جديدة لحسابك. ستستخدمها لتسجيل الدخول في التطبيق.</p>
+    <form id="form" novalidate>
+      <label for="p1">كلمة المرور الجديدة</label>
+      <input id="p1" type="password" autocomplete="new-password" minlength="6" required>
+      <label for="p2">أعد كتابة كلمة المرور</label>
+      <input id="p2" type="password" autocomplete="new-password" minlength="6" required>
+      <button id="save" type="submit">حفظ كلمة المرور</button>
+      <div id="msg" class="msg" role="alert"></div>
+    </form>
+  </section>
+
+  <section id="doneView" hidden>
+    <h1>تم تغيير كلمة المرور</h1>
+    <p>ارجع إلى تطبيق TALIVRA TR وسجّل الدخول بكلمة المرور الجديدة.</p>
+  </section>
+
+  <section id="badView" hidden>
+    <h1>الرابط غير صالح</h1>
+    <p>انتهت صلاحية الرابط أو استُخدم من قبل. اطلب رابطًا جديدًا من شاشة تسجيل الدخول في التطبيق ← «نسيت كلمة المرور».</p>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // المفتاح المنشور (publishable) عام بطبيعته — نفس الموجود داخل التطبيق
+  // يُنشأ عند الحاجة: لو تعذّر تحميل المكتبة تبقى الصفحة تعمل وتعرض السبب
+  var sb = null;
+  function client() {
+    if (!sb && window.supabase) {
+      sb = window.supabase.createClient(
+        "https://lmaixawnydpweyegxupu.supabase.co",
+        "sb_publishable_xkFQMkxv4V7XHHP0rGZQug_M-Y4WRQs",
+        { auth: { persistSession: false, detectSessionInUrl: false } }
+      );
+    }
+    return sb;
+  }
+  // نوعا الروابط:
+  //  · القالب الافتراضي لـSupabase: #access_token=…&refresh_token=…&type=recovery
+  //  · القالب المعرّب (بعد تفعيل SMTP): ?token_hash=…&type=recovery
+  var q = new URLSearchParams(location.search);
+  var h = new URLSearchParams((location.hash || "").replace(/^#/, ""));
+  var tokenHash = q.get("token_hash");
+  var accessToken = h.get("access_token");
+  var refreshToken = h.get("refresh_token");
+  var linkError = h.get("error") || q.get("error");
+  history.replaceState(null, "", location.pathname); // لا نُبقي الرمز في العنوان
+
+  function show(id) { ["formView", "doneView", "badView"].forEach(function (v) { document.getElementById(v).hidden = v !== id; }); }
+  function msg(t, ok) { var m = document.getElementById("msg"); m.textContent = t; m.className = "msg " + (ok ? "ok" : "err"); }
+
+  if (linkError || (!tokenHash && !(accessToken && refreshToken))) show("badView");
+
+  var verified = false;
+  document.getElementById("form").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    var p1 = document.getElementById("p1").value, p2 = document.getElementById("p2").value;
+    if (p1.length < 6) return msg("كلمة المرور يجب أن تكون 6 أحرف على الأقل.");
+    if (p1 !== p2) return msg("كلمتا المرور غير متطابقتين.");
+    var btn = document.getElementById("save");
+    if (!client()) return msg("تعذّر تحميل الصفحة بالكامل، تحقق من الإنترنت وأعد فتح الرابط.");
+    btn.disabled = true; msg("جارٍ الحفظ…", true);
+    try {
+      if (!verified) {
+        var v = tokenHash
+          ? await client().auth.verifyOtp({ token_hash: tokenHash, type: "recovery" })
+          : await client().auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+        if (v.error) { show("badView"); return; }
+        verified = true;
+      }
+      var u = await client().auth.updateUser({ password: p1 });
+      if (u.error) { btn.disabled = false; return msg(u.error.message.indexOf("different") >= 0 ? "اختر كلمة مرور مختلفة عن القديمة." : "تعذّر الحفظ، حاول مرة أخرى."); }
+      await client().auth.signOut();
+      show("doneView");
+    } catch (err) {
+      btn.disabled = false; msg("تعذّر الاتصال، تحقق من الإنترنت وحاول مرة أخرى.");
+    }
+  });
+</script>
+</body>
+</html>

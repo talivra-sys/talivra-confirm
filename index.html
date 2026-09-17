@@ -89,6 +89,13 @@
     // Supabase يعيد النتيجة في الـhash (#...) أو في الاستعلام (?...)
     var raw = (location.hash || "").replace(/^#/, "") + "&" + (location.search || "").replace(/^\?/, "");
     var params = new URLSearchParams(raw);
+
+    // رابط «نسيت كلمة المرور» بالقالب الافتراضي يصل هنا (Site URL) —
+    // نحوّله فورًا لصفحة كلمة المرور الجديدة مع نفس البيانات
+    if (params.get("type") === "recovery") {
+      location.replace("reset.html" + location.search + location.hash);
+      return;
+    }
     var error = params.get("error") || params.get("error_code");
 
     // ⚠ لا نُبقي أي رمز دخول ظاهرًا في شريط العنوان أو سجل المتصفح
