@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>TALIVRA TR — تأكيد الحساب</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --black: #000000;
+    --panel: #121212;
+    --line: #262626;
+    --orange: #FF7A00;
+    --text: #F5F5F5;
+    --muted: #9E9E9E;
+    --green: #26A69A;
+    --red: #EF5350;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: "Tajawal", Tahoma, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  main { width: 100%; max-width: 440px; text-align: center; }
+
+  .brand { font-weight: 800; font-size: 20px; letter-spacing: .5px; margin-bottom: 36px; }
+  .brand span { color: var(--orange); }
+
+  /* الشموع الصاعدة — العنصر الوحيد المميز في الصفحة */
+  .chart { direction: ltr; display: flex; align-items: flex-end; justify-content: center; gap: 12px; height: 120px; margin-bottom: 32px; }
+  .candle { position: relative; width: 18px; border-radius: 3px; transform-origin: bottom; transform: scaleY(0); animation: rise .5s ease-out forwards; }
+  .candle::before { content: ""; position: absolute; left: 50%; width: 2px; top: -14px; bottom: -10px; transform: translateX(-50%); background: inherit; opacity: .55; }
+  .c1 { height: 34px; background: var(--muted); animation-delay: .05s; }
+  .c2 { height: 52px; background: var(--muted); animation-delay: .15s; }
+  .c3 { height: 72px; background: var(--orange); animation-delay: .25s; }
+  .c4 { height: 104px; background: var(--orange); animation-delay: .35s; }
+  .error .c3, .error .c4 { background: var(--red); }
+  .error .c4 { height: 40px; }
+  @keyframes rise { to { transform: scaleY(1); } }
+  @media (prefers-reduced-motion: reduce) { .candle { animation: none; transform: none; } }
+
+  h1 { font-size: 30px; font-weight: 800; margin: 0 0 12px; line-height: 1.3; }
+  p { font-size: 16px; line-height: 1.8; color: var(--muted); margin: 0 auto 28px; max-width: 34ch; }
+
+  .open {
+    display: block; width: 100%;
+    background: var(--orange); color: #000;
+    font-family: inherit; font-size: 17px; font-weight: 800;
+    text-decoration: none; padding: 16px; border-radius: 14px; border: 0;
+  }
+  .open:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+  .hint { font-size: 13px; color: #6f6f6f; margin-top: 16px; line-height: 1.7; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main id="page">
+  <div class="brand">TALIVRA <span>TR</span></div>
+
+  <div class="chart" aria-hidden="true">
+    <div class="candle c1"></div><div class="candle c2"></div><div class="candle c3"></div><div class="candle c4"></div>
+  </div>
+
+  <section id="ok">
+    <h1>تم تأكيد بريدك</h1>
+    <p>حسابك مفعّل الآن. ارجع إلى التطبيق وسجّل الدخول بنفس البريد وكلمة المرور.</p>
+  </section>
+
+  <section id="fail" hidden>
+    <h1 id="failTitle">انتهت صلاحية رابط التأكيد</h1>
+    <p id="failText">أنشئ رابطًا جديدًا من التطبيق: افتح شاشة تسجيل الدخول واطلب إعادة إرسال بريد التأكيد.</p>
+  </section>
+
+  <a class="open" id="openApp" href="intent://#Intent;package=com.talivra.tr;end">افتح التطبيق</a>
+  <div class="hint" id="hint">إن لم يُفتح التطبيق، افتحه يدويًا من الشاشة الرئيسية لجوالك.</div>
+</main>
+
+<script>
+  (function () {
+    // Supabase يعيد النتيجة في الـhash (#...) أو في الاستعلام (?...)
+    var raw = (location.hash || "").replace(/^#/, "") + "&" + (location.search || "").replace(/^\?/, "");
+    var params = new URLSearchParams(raw);
+    var error = params.get("error") || params.get("error_code");
+
+    // ⚠ لا نُبقي أي رمز دخول ظاهرًا في شريط العنوان أو سجل المتصفح
+    if (location.hash || location.search) {
+      history.replaceState(null, "", location.pathname);
+    }
+
+    if (error) {
+      document.getElementById("page").classList.add("error");
+      document.getElementById("ok").hidden = true;
+      document.getElementById("fail").hidden = false;
+      var code = params.get("error_code") || "";
+      if (code !== "otp_expired") {
+        document.getElementById("failTitle").textContent = "تعذّر تأكيد البريد";
+        document.getElementById("failText").textContent =
+          "الرابط غير صالح أو استُخدم من قبل. إن كان حسابك مؤكدًا مسبقًا فسجّل الدخول مباشرة، وإلا اطلب بريد تأكيد جديدًا من التطبيق.";
+      }
+    }
+
+    // رابط فتح التطبيق يعمل على أندرويد فقط
+    if (!/android/i.test(navigator.userAgent)) {
+      document.getElementById("openApp").hidden = true;
+      document.getElementById("hint").textContent = "افتح تطبيق TALIVRA TR على جوالك وسجّل الدخول.";
+    }
+  })();
+</script>
+</body>
+</html>
